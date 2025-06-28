@@ -1,0 +1,122 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 48 100% 97%;
+    --foreground: 122 46% 20%;
+
+    --card: 48 100% 97%;
+    --card-foreground: 122 46% 20%;
+
+    --popover: 48 100% 97%;
+    --popover-foreground: 122 46% 20%;
+
+    --primary: 122 46% 20%;
+    --primary-foreground: 48 100% 97%;
+
+    --secondary: 48 100% 50%;
+    --secondary-foreground: 122 46% 20%;
+
+    --muted: 48 70% 97%;
+    --muted-foreground: 122 20% 40%;
+
+    --accent: 48 70% 94%;
+    --accent-foreground: 122 46% 20%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 48 100% 97%;
+
+    --border: 48 70% 88%;
+    --input: 48 70% 90%;
+    --ring: 122 46% 32%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 122 46% 20%;
+    --sidebar-foreground: 48 100% 97%;
+    --sidebar-primary: 122 46% 20%;
+    --sidebar-primary-foreground: 48 100% 97%;
+    --sidebar-accent: 122 30% 16%;
+    --sidebar-accent-foreground: 48 100% 97%;
+    --sidebar-border: 122 30% 16%;
+    --sidebar-ring: 48 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-[#FFF8E1] text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  .nutri-shadow {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .progress-bar {
+    @apply h-2 rounded-full overflow-hidden bg-gray-200;
+  }
+  
+  .progress-bar-fill {
+    @apply h-full rounded-full;
+  }
+  
+  .star-rating input {
+    @apply hidden;
+  }
+  
+  .star-rating label {
+    @apply cursor-pointer;
+  }
+  
+  .star-filled {
+    @apply text-nutri-yellow;
+  }
+  
+  .star-empty {
+    @apply text-gray-300;
+  }
+  
+  .nutri-card {
+    @apply bg-white rounded-lg shadow-md p-4;
+  }
+  
+  .badge-pendiente {
+    @apply bg-nutri-yellow/20 text-nutri-yellow px-2 py-1 rounded-md font-medium;
+  }
+  
+  .btn-primary {
+    @apply bg-nutri-green text-white px-4 py-2 rounded-md hover:bg-nutri-lightgreen transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors;
+  }
+  
+  .nutri-table {
+    @apply w-full border-collapse;
+  }
+  
+  .nutri-table th {
+    @apply py-3 px-4 text-left bg-gray-100 font-medium text-gray-700;
+  }
+  
+  .nutri-table td {
+    @apply py-3 px-4 border-t border-gray-200;
+  }
+  
+  .sidebar-link {
+    @apply flex items-center gap-2 px-4 py-3 text-white hover:bg-nutri-lightgreen/20 rounded-md transition-colors;
+  }
+  
+  .sidebar-link.active {
+    @apply bg-nutri-lightgreen/20;
+  }
+}

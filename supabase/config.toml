@@ -1,0 +1,20 @@
+
+project_id = "mtsyuzvqnpdeqfeqpixv"
+
+[functions.check-pending-orders]
+verify_jwt = true
+
+[functions.create-user]
+verify_jwt = false
+
+[functions.validate-document]
+verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = false
+
+[functions.chat-assistant]
+verify_jwt = true
+
+[functions.create-assistant-config-table]
+verify_jwt = false
