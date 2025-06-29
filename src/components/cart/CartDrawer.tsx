@@ -185,6 +185,9 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ open, onClose }) => {
                                 const num = Number(value);
                                 if (num > 0) {
                                   updateQuantity(item.id, num);
+                                } else if (value === "") {
+                                  // Si el usuario borra el valor, restaurar la última cantidad válida
+                                  updateQuantity(item.id, 1);
                                 }
                               }}
                               className="w-16 text-center border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-nutri-green"
