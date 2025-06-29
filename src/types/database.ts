@@ -70,22 +70,19 @@ export interface Producto {
   stock: number;
   stock_alert: number;
   unit_of_measure: string;
+  cantidad?: number;
 }
 
 /* PEDIDO: propiedades de base de datos Supabase */
 export interface Pedido {
   id: string;
-  producto_id: string;
   proveedor_id: string;
+  productos: Producto[];
   precio_total: number;
-  cantidad: number;
   estado: string;
   fecha_pedido: string;
   pdf_url?: string | null;
-  producto?: {
-    nombre: string;
-    stock?: number;
-  };
+  ticket: string;
   proveedor?: {
     nombre: string;
   };
@@ -100,7 +97,7 @@ export interface HistorialItem {
   fecha: string;
   modulo: string;
   accion: string;
-  datos: Record<string, any> | null;
+  datos: Record<string, unknown> | null;
   usuario_id: string | null;
   pdf_url?: string | null;
 }
@@ -115,6 +112,7 @@ export type AnyTable =
   | "units_of_measure";
 
 // Acoplamiento de tabla Supabase : Type-safe @danielyatacoblas
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const anyFrom = <T>(supabase: any, table: AnyTable) => {
   return supabase.from(table) as T;
 };

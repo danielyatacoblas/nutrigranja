@@ -1,8 +1,7 @@
-
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import Modal from '@/components/common/Modal';
-import { Pedido } from '@/types/database';
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import Modal from "@/components/common/Modal";
+import { Pedido } from "@/types/database";
 
 interface PedidosEditModalProps {
   isOpen: boolean;
@@ -17,13 +16,15 @@ const PedidosEditModal: React.FC<PedidosEditModalProps> = ({
   onClose,
   onSave,
   currentPedido,
-  isLoading
+  isLoading,
 }) => {
-  const [editFechaPedido, setEditFechaPedido] = useState('');
+  const [editFechaPedido, setEditFechaPedido] = useState("");
 
   useEffect(() => {
     if (currentPedido && currentPedido.fecha_pedido) {
-      setEditFechaPedido(new Date(currentPedido.fecha_pedido).toISOString().split('T')[0]);
+      setEditFechaPedido(
+        new Date(currentPedido.fecha_pedido).toISOString().split("T")[0]
+      );
     }
   }, [currentPedido]);
 
@@ -42,7 +43,7 @@ const PedidosEditModal: React.FC<PedidosEditModalProps> = ({
             Cancelar
           </Button>
           <Button onClick={handleSave} disabled={isLoading}>
-            {isLoading ? 'Guardando...' : 'Guardar Cambios'}
+            {isLoading ? "Guardando..." : "Guardar Cambios"}
           </Button>
         </>
       }
@@ -51,12 +52,32 @@ const PedidosEditModal: React.FC<PedidosEditModalProps> = ({
         {currentPedido && (
           <>
             <div className="bg-gray-50 p-3 rounded-md mb-4">
-              <p><span className="font-medium">Producto:</span> {currentPedido.producto?.nombre}</p>
-              <p><span className="font-medium">Proveedor:</span> {currentPedido.proveedor?.nombre}</p>
-              <p><span className="font-medium">Cantidad:</span> {currentPedido.cantidad}</p>
-              <p><span className="font-medium">Precio Total:</span> ${currentPedido.precio_total.toFixed(2)}</p>
+              <p className="font-medium mb-1">Productos:</p>
+              <ul className="mb-2 list-disc list-inside">
+                {Array.isArray(currentPedido.productos) &&
+                currentPedido.productos.length > 0 ? (
+                  currentPedido.productos.map((prod) => (
+                    <li key={prod.id} className="ml-2">
+                      {prod.nombre}{" "}
+                      <span className="text-xs text-gray-500">
+                        x{prod.cantidad} {prod.unidad}
+                      </span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-gray-400">Sin productos</li>
+                )}
+              </ul>
+              <p>
+                <span className="font-medium">Proveedor:</span>{" "}
+                {currentPedido.proveedor?.nombre}
+              </p>
+              <p>
+                <span className="font-medium">Precio Total:</span> $
+                {currentPedido.precio_total.toFixed(2)}
+              </p>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Fecha de Pedido

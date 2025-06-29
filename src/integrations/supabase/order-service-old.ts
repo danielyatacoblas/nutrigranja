@@ -2,6 +2,7 @@ import { supabase } from "./base-client";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { v4 as uuidv4 } from "uuid";
+import QRCode from "qrcode";
 
 // Helper to create a new order
 export const createPedido = async (pedidoData: {
@@ -78,93 +79,100 @@ export const generateOrderPdfOld = async (pedido: any, usuario: any) => {
     }
 
     // Create new PDF
-    const doc = new jsPDF();
+    const doc = new jsPDF({ format: "a6", unit: "mm" }); // Formato ticket pequeño
 
-    try {
-      // Company info header - Simplified without logo
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text("ORDEN DE COMPRA", 14, 15);
+    // --- Encabezado tipo ticket ---
+    doc.setFillColor(44, 99, 44);
+    doc.rect(0, 0, doc.internal.pageSize.getWidth(), 16, "F");
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.text("NUTRIGRANJA S.R.L.", doc.internal.pageSize.getWidth() / 2, 8, {
+      align: "center",
+    });
 
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text("RUC: 2072814901", 14, 22);
-      doc.text("NutriGranja S.R.L.", 14, 27);
-      doc.text("Gerente: Alder Flores Nick", 14, 32);
+    // Ticket grande
+    doc.setFontSize(13);
+    doc.setTextColor(44, 99, 44);
+    doc.setFont("helvetica", "bold");
+    doc.text(
+      `TICKET: ${pedido.ticket || pedido.id.substring(0, 8)}`,
+      doc.internal.pageSize.getWidth() / 2,
+      22,
+      { align: "center" }
+    );
+
+    // Info general
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "normal");
+    let y = 28;
+    doc.text(
+      `Fecha: ${new Date(pedido.fecha_pedido).toLocaleDateString()}`,
+      8,
+      y
+    );
+    y += 5;
+    doc.text(`Proveedor: ${pedido.proveedor?.nombre || "N/A"}`, 8, y);
+    y += 5;
+    doc.text(
+      `Atiende: ${usuario?.nombres || ""} ${usuario?.apellidos || ""}`,
+      8,
+      y
+    );
+    y += 7;
+
+    // Tabla de productos
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("Detalle:", 8, y);
+    y += 3;
+    doc.setFont("helvetica", "normal");
+    const productos = Array.isArray(pedido.productos) ? pedido.productos : [];
+    productos.forEach((prod: any) => {
       doc.text(
-        `Empleado: ${usuario?.nombres || ""} ${usuario?.apellidos || ""}`,
-        14,
-        37
+        `${prod.nombre} x${prod.cantidad || 1}  S/.${
+          prod.precio ? Number(prod.precio).toFixed(2) : "0.00"
+        }`,
+        8,
+        y
       );
+      y += 4;
+    });
+    y += 2;
+    doc.setFont("helvetica", "bold");
+    doc.text(`TOTAL: S/.${Number(pedido.precio_total).toFixed(2)}`, 8, y);
+    y += 8;
 
-      // Order details
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text("Confirmación de pedido", 14, 55);
+    // --- QR con datos del pedido ---
+    const qrData = `Ticket: ${pedido.ticket || pedido.id}\nProveedor: ${
+      pedido.proveedor?.nombre || "N/A"
+    }\nFecha: ${new Date(
+      pedido.fecha_pedido
+    ).toLocaleDateString()}\nTotal: S/.${Number(pedido.precio_total).toFixed(
+      2
+    )}`;
+    const qrUrl = await QRCode.toDataURL(qrData, { width: 80, margin: 1 });
+    doc.addImage(
+      qrUrl,
+      "PNG",
+      doc.internal.pageSize.getWidth() / 2 - 18,
+      y,
+      36,
+      36
+    );
+    y += 38;
 
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      const today = new Date();
-      doc.text(`Orden N°: ${pedido.id.substring(0, 6)}`, 14, 62);
-      doc.text(`Fecha del pedido: ${today.toLocaleDateString()}`, 14, 67);
-      doc.text(`Proveedor: ${pedido.proveedor?.nombre || "N/A"}`, 14, 72);
-      doc.text("Método de pago: Contra entrega", 14, 77);
-
-      // Making sure producto nombre is safely accessed
-      const productoNombre = pedido.producto?.nombre || "N/A";
-      // Use a short version of the product ID as the identifier
-      const productoId = pedido.producto_id
-        ? pedido.producto_id.substring(0, 6)
-        : "N/A";
-
-      console.log("Producto nombre:", productoNombre);
-      console.log("ID de producto:", productoId);
-
-      // Order table
-      autoTable(doc, {
-        startY: 85,
-        head: [["ID", "Artículo", "Cantidad", "Precio", "Total"]],
-        body: [
-          [
-            productoId,
-            productoNombre,
-            pedido.cantidad.toString(),
-            `$${(pedido.precio_total / pedido.cantidad).toFixed(2)}`,
-            `$${pedido.precio_total.toFixed(2)}`,
-          ],
-        ],
-        foot: [
-          ["", "", "", "SUBTOTAL:", `$${pedido.precio_total.toFixed(2)}`],
-          [
-            "",
-            "",
-            "",
-            "TOTAL SOLES:",
-            `S/.${(pedido.precio_total * 3.7).toFixed(2)}`,
-          ],
-        ],
-        theme: "striped",
-      });
-
-      // Get the last table's Y position
-      const finalY = (doc as any).lastAutoTable?.finalY || 120;
-
-      // Footer notes
-      doc.setFontSize(9);
-      doc.text(
-        "Por favor, entregue los productos indicados, según los términos acordados.",
-        14,
-        finalY + 15
-      );
-      doc.text(
-        "Las modificaciones a esta orden, requieren autorización de NutriGranja S.R.L.",
-        14,
-        finalY + 20
-      );
-    } catch (pdfError) {
-      console.error("Error generando contenido del PDF:", pdfError);
-      throw new Error(`Error generando contenido del PDF: ${pdfError.message}`);
-    }
+    // Footer bonito
+    doc.setFontSize(8);
+    doc.setTextColor(120, 120, 120);
+    doc.setFont("helvetica", "italic");
+    doc.text(
+      "Gracias por su compra en NutriGranja!",
+      doc.internal.pageSize.getWidth() / 2,
+      y,
+      { align: "center" }
+    );
 
     // Generate the PDF as Blob
     let pdfBlob;

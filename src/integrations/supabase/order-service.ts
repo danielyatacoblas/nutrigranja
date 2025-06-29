@@ -1,11 +1,10 @@
+import { Producto } from "@/types/database";
 import { supabase } from "./base-client";
 import { createNotification } from "./notification-service";
 
 export const createPedido = async (pedido: {
-  producto_id: string;
+  productos: Producto[]; // array de productos con todos los datos necesarios
   proveedor_id: string;
-  precio_total: number;
-  cantidad: number;
   fecha_estimada_entrega?: string;
   usuario_id?: string;
 }) => {
@@ -19,18 +18,26 @@ export const createPedido = async (pedido: {
       pedido.usuario_id = user.id;
     }
 
-    // Crear el pedido
+    // Asegura que productos siempre sea un array
+    const productos = Array.isArray(pedido.productos) ? pedido.productos : [];
+    if (productos.length === 0) {
+      throw new Error("El pedido debe tener al menos un producto.");
+    }
+    const precio_total = productos.reduce(
+      (sum, prod) => sum + Number(prod.precio) * Number(prod.cantidad || 1),
+      0
+    );
+
     const { data: pedidoData, error: pedidoError } = await supabase
       .from("pedido")
       .insert([
         {
-          producto_id: pedido.producto_id,
+          productos, // array de productos seguro
           proveedor_id: pedido.proveedor_id,
-          precio_total: pedido.precio_total,
-          cantidad: pedido.cantidad,
           fecha_estimada_entrega: pedido.fecha_estimada_entrega,
           estado: "pendiente",
           usuario_id: pedido.usuario_id,
+          precio_total,
         },
       ])
       .select()
@@ -41,7 +48,6 @@ export const createPedido = async (pedido: {
 
     // Crear notificación de manera no bloqueante
     try {
-      // Intentamos crear una notificación pero no bloqueamos si falla
       const result = await createNotification({
         tipo: "pedido_creado",
         titulo: "Nuevo pedido creado",
@@ -52,19 +58,17 @@ export const createPedido = async (pedido: {
         icono: "ShoppingCart",
         color: "green",
       });
-
-      // Solo accede a data si result.data no es null
       const notificationId = result.data?.id;
       if (notificationId) {
         console.log("Notificación creada con ID:", notificationId);
       }
     } catch (e) {
-      // Solo loggeamos el error pero no interrumpimos la creación del pedido
       console.error("Error al crear notificación:", e);
     }
 
     return { data: pedidoData, error: null };
-  } catch (error: any) {
+  } catch (e) {
+    const error = e as Error;
     console.error("Error al crear pedido:", error);
     return { data: null, error };
   }

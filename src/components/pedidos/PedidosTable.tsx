@@ -59,16 +59,15 @@ const PedidosTable: React.FC<PedidosTableProps> = ({
   // Table columns definition
   const columns = [
     {
-      header: "Producto",
-      accessor: "producto",
-      cell: (value: any) => value?.nombre || "N/A",
+      header: "Ticket",
+      accessor: "ticket",
+      cell: (value: string) => value || "-",
     },
     {
       header: "Proveedor",
       accessor: "proveedor",
       cell: (value: any) => value?.nombre || "N/A",
     },
-    { header: "Cantidad", accessor: "cantidad" },
     {
       header: "Fecha Pedido",
       accessor: "fecha_pedido",

@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
 
 interface CartItem {
   id: number;
@@ -25,7 +31,19 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [items, setItems] = useState<CartItem[]>([]);
+  // Cargar carrito desde localStorage al iniciar
+  const [items, setItems] = useState<CartItem[]>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("cart_items");
+      return stored ? JSON.parse(stored) : [];
+    }
+    return [];
+  });
+
+  // Guardar carrito en localStorage cada vez que cambie
+  useEffect(() => {
+    localStorage.setItem("cart_items", JSON.stringify(items));
+  }, [items]);
 
   const addToCart = useCallback(
     (newItem: Omit<CartItem, "cantidad">, cantidad: number) => {
@@ -65,8 +83,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   }, []);
 
+  // Borra el carrito (y localStorage) al cerrar sesión
   const clearCart = useCallback(() => {
     setItems([]);
+    localStorage.removeItem("cart_items");
   }, []);
 
   const total = items.reduce(

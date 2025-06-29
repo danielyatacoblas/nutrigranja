@@ -48,16 +48,8 @@ const PedidosConfirmModal: React.FC<PedidosConfirmModalProps> = ({
           {currentPedido && (
             <>
               <p>
-                <span className="font-medium">Producto:</span>{" "}
-                {currentPedido.producto?.nombre}
-              </p>
-              <p>
                 <span className="font-medium">Proveedor:</span>{" "}
                 {currentPedido.proveedor?.nombre}
-              </p>
-              <p>
-                <span className="font-medium">Cantidad:</span>{" "}
-                {currentPedido.cantidad}
               </p>
               <p>
                 <span className="font-medium">Fecha Pedido:</span>{" "}
@@ -67,6 +59,31 @@ const PedidosConfirmModal: React.FC<PedidosConfirmModalProps> = ({
                 <span className="font-medium">Precio Total:</span> $
                 {currentPedido.precio_total.toFixed(2)}
               </p>
+              <div className="mt-3">
+                <span className="font-medium">Productos:</span>
+                <ul className="mt-1 space-y-1">
+                  {currentPedido.productos?.map((prod, idx) => (
+                    <li
+                      key={prod.id || idx}
+                      className="border-b last:border-b-0 pb-1"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                        <span>
+                          <span className="font-semibold">{prod.nombre}</span>
+                          {prod.cantidad ? ` x${prod.cantidad}` : ""}
+                        </span>
+                        <span className="text-sm text-gray-600">
+                          Precio unitario: ${prod.precio?.toFixed(2) || "-"} |
+                          Subtotal: $
+                          {prod.precio && prod.cantidad
+                            ? (prod.precio * prod.cantidad).toFixed(2)
+                            : "-"}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </>
           )}
         </div>

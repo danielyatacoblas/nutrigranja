@@ -1,10 +1,9 @@
-
-import React from 'react';
-import { Clock, Package } from 'lucide-react';
+import React from "react";
+import { Clock, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import StarRating from './StarRating';
-import { useCart } from '@/context/CartContext';
-import { toast } from 'sonner';
+import StarRating from "./StarRating";
+import { useCart } from "@/context/CartContext";
+import { toast } from "sonner";
 
 interface ProductCardProps {
   id: number;
@@ -29,40 +28,47 @@ const ProductCard: React.FC<ProductCardProps> = ({
   unidad = "Tonelada",
   proveedor_id,
   stock,
-  unitOfMeasure = "UNIDAD"
+  unitOfMeasure = "UNIDAD",
 }) => {
   const { addToCart } = useCart();
 
   const handleAddToCart = () => {
-    addToCart({ 
-      id, 
-      imagen, 
-      nombre, 
-      precio, 
-      unidad,
-      proveedor_id 
-    }, 1);
+    addToCart(
+      {
+        id,
+        imagen,
+        nombre,
+        precio,
+        unidad,
+        proveedor_id,
+      },
+      1
+    );
     toast.success(`${nombre} agregado al carrito`);
   };
 
   const getStockStatusColor = () => {
     if (stock === undefined) return "text-gray-500";
     if (stock <= 0) return "text-red-500";
-    if (stock < 10) return "text-amber-500";
-    return "text-green-600";
+    if (stock < 10) return "text-white";
+    return "text-white";
   };
 
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       <div className="h-48 overflow-hidden relative">
-        <img 
-          src={imagen} 
-          alt={nombre} 
-          className="w-full h-full object-cover transition-transform hover:scale-105" 
+        <img
+          src={imagen}
+          alt={nombre}
+          className="w-full h-full object-cover transition-transform hover:scale-105"
         />
         {stock !== undefined && (
-          <div className={`absolute top-2 right-2 ${getStockStatusColor()} bg-white px-2 py-1 rounded-full text-xs font-medium shadow-sm`}>
-            Stock: {stock} {unitOfMeasure}
+          <div
+            className={` absolute top-2 right-2 ${
+              stock <= 0 ? "bg-red-600 text-white" : getStockStatusColor()
+            } px-2 py-1 rounded-full text-xs font-bold shadow-sm border border-white bg-green-600`}
+          >
+            {stock <= 0 ? "Sin Stock" : `Stock: ${stock} ${unitOfMeasure}`}
           </div>
         )}
       </div>
@@ -83,14 +89,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </div>
         <div className="flex items-center text-gray-600 mb-4">
           <Package size={16} />
-          <span className="ml-1 text-sm">{unidad} ({unitOfMeasure})</span>
+          <span className="ml-1 text-sm">
+            {unidad} ({unitOfMeasure})
+          </span>
         </div>
-        <Button 
+        <Button
           onClick={handleAddToCart}
-          className="w-full bg-nutri-green hover:bg-nutri-green/90"
-          disabled={stock !== undefined && stock <= 0}
+          className={"w-full bg-nutri-green hover:bg-nutri-green/90"}
         >
-          {stock !== undefined && stock <= 0 ? 'Sin Stock' : 'Agregar al Carrito'}
+          Agregar al Carrito
         </Button>
       </div>
     </div>

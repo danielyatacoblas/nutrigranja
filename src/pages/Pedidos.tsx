@@ -95,7 +95,6 @@ const Pedidos = () => {
     try {
       const { data, error } = await supabase.from("pedido").select(`
           *,
-          producto:producto_id (*),
           proveedor:proveedor_id (*),
           usuario:usuario_id (*)
         `);
@@ -108,15 +107,7 @@ const Pedidos = () => {
 
       // Transform the data to match the Pedido interface and handle potential errors
       const transformedData = data?.map((pedido) => {
-        // Check if producto or proveedor is an object and provide default values
-        const productoData =
-          pedido.producto &&
-          typeof pedido.producto === "object" &&
-          !Array.isArray(pedido.producto) &&
-          !("error" in pedido.producto)
-            ? pedido.producto
-            : { nombre: "N/A", stock: 0 };
-
+        // Check if proveedor is an object and provide default values
         const proveedorData =
           pedido.proveedor &&
           typeof pedido.proveedor === "object" &&
@@ -133,19 +124,18 @@ const Pedidos = () => {
             ? pedido.usuario
             : { usuario: "N/A" };
 
+        // productos y ticket pueden no existir en pedidos antiguos, aseguramos que existan
         return {
           ...pedido,
-          producto: {
-            nombre: productoData?.nombre || "N/A",
-            stock: productoData?.stock || 0,
-          },
+          productos: Array.isArray(pedido.productos) ? pedido.productos : [],
+          ticket: typeof pedido.ticket === "string" ? pedido.ticket : "",
           proveedor: {
             nombre: proveedorData?.nombre || "N/A",
           },
           usuario: {
             usuario: usuarioData?.usuario || "N/A",
           },
-        };
+        } as Pedido;
       }) as Pedido[];
 
       console.log("Pedidos transformados:", transformedData);
@@ -324,7 +314,8 @@ const Pedidos = () => {
 
   const handleSubmitEvaluacion = async (
     ratings: RatingData,
-    comentarios: string
+    comentarios: string,
+    pedido: Pedido
   ) => {
     if (!currentPedido) {
       toast.error("No hay pedido seleccionado para evaluar.");
@@ -346,31 +337,46 @@ const Pedidos = () => {
       if (!pdfUrl) throw new Error("No se pudo generar el PDF del pedido");
       // Actualizar estado del pedido y guardar URL del PDF
       await updatePedidoEstado(currentPedido.id, "recibido", pdfUrl);
-      const { error: calificacionError } = await registrarCalificacion({
-        producto_id: currentPedido.producto_id,
-        proveedor_id: currentPedido.proveedor_id,
-        comentario: comentarios,
-        tiempo_entrega: ratings.tiempoEntrega,
-        precio: ratings.precio,
-        calidad: ratings.calidad,
-      });
-      if (calificacionError) throw calificacionError;
-      // Actualizar el stock del producto (restar la cantidad del pedido)
-      const { data: productoData, error: productoError } = await supabase
-        .from("producto")
-        .select("stock")
-        .eq("id", currentPedido.producto_id)
-        .single();
-      if (productoError) throw productoError;
-      const nuevoStock = Math.max(
-        0,
-        (productoData?.stock || 0) + currentPedido.cantidad
-      );
-      const { error: stockError } = await supabase
-        .from("producto")
-        .update({ stock: nuevoStock })
-        .eq("id", currentPedido.producto_id);
-      if (stockError) throw stockError;
+      // Calificar cada producto del pedido
+      if (!Array.isArray(pedido.productos) || pedido.productos.length === 0) {
+        toast.error(
+          "El pedido no tiene productos válidos. No se puede actualizar el stock."
+        );
+        setIsEvaluarModalOpen(false);
+        return;
+      }
+      for (const producto of currentPedido.productos) {
+        const { error: calificacionError } = await registrarCalificacion({
+          producto_id: producto.id,
+          proveedor_id: currentPedido.proveedor_id,
+          comentario: comentarios,
+          tiempo_entrega: ratings.tiempoEntrega,
+          precio: ratings.precio,
+          calidad: ratings.calidad,
+        });
+        if (calificacionError) throw calificacionError;
+        // Al confirmar el pedido como recibido, SUMAR la cantidad al stock del producto
+        // Nunca restar stock al crear el pedido, solo sumar al recibir
+        const { data: productoData, error: productoError } = await supabase
+          .from("producto")
+          .select("stock, nombre")
+          .eq("id", producto.id)
+          .single();
+        if (productoError) throw productoError;
+        const cantidadPedido = producto.cantidad;
+        const stockAnterior = productoData?.stock;
+        const nuevoStock = stockAnterior + cantidadPedido;
+        console.log(
+          `Actualizando stock para producto ${producto.nombre} (ID: ${producto.id}): cantidad del pedido = ${cantidadPedido}, stock anterior = ${stockAnterior}, stock nuevo = ${nuevoStock}`
+        );
+        if (cantidadPedido > 0) {
+          const { error: updateError } = await supabase
+            .from("producto")
+            .update({ stock: nuevoStock })
+            .eq("id", producto.id);
+          if (updateError) throw updateError;
+        }
+      }
       // Crear notificación informativa (opcional)
       try {
         await createNotification({
@@ -430,9 +436,9 @@ const Pedidos = () => {
     if (searchTerm) {
       filtered = filtered.filter(
         (pedido) =>
-          pedido.producto?.nombre
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
+          pedido.productos?.some((prod) =>
+            prod.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
+          ) ||
           pedido.proveedor?.nombre
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase())

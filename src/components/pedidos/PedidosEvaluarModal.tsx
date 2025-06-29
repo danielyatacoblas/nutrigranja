@@ -8,7 +8,7 @@ import { toast } from "../ui/sonner";
 interface PedidosEvaluarModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (ratings: RatingData, comentarios: string) => void;
+  onSubmit: (ratings: RatingData, comentarios: string, pedido: Pedido) => void;
   currentPedido: Pedido | null;
   isLoading: boolean;
   isPdfGenerating: boolean;
@@ -49,7 +49,7 @@ const PedidosEvaluarModal: React.FC<PedidosEvaluarModalProps> = ({
   };
 
   const handleSubmit = () => {
-    onSubmit(ratings, comentarios);
+    onSubmit(ratings, comentarios, currentPedido);
   };
 
   // Reset form when modal opens with a new pedido
