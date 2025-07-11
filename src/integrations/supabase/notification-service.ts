@@ -1,115 +1,61 @@
+import { supabase } from "./base-client";
 
-import { supabase } from './base-client';
-
-// Get notifications for a user
+// Get notifications for a user (solo las no eliminadas)
 export const getUserNotifications = async (userId: string) => {
   return supabase
-    .from('notificaciones')
-    .select('*')
-    .or(`usuario_id.is.null,usuario_id.eq.${userId}`)
-    .or(`para_roles.cs.{"admin"},para_roles.cs.{"usuario"}`)
-    .order('fecha_creacion', { ascending: false });
+    .from("v_notificaciones_usuario")
+    .select("*")
+    .eq("usuario_id", userId)
+    .order("fecha_creacion", { ascending: false });
 };
 
-// Create a new notification
+// Marcar notificación como leída para el usuario
+export const markNotificationAsSeen = async (notificacionUsuarioId: string) => {
+  return supabase.rpc("marcar_notificacion_leida", {
+    p_notificacion_usuario_id: notificacionUsuarioId,
+  });
+};
+
+// Eliminar una notificación solo para el usuario
+export const deleteNotification = async (notificacionUsuarioId: string) => {
+  return supabase
+    .from("notificaciones_usuario")
+    .update({ eliminada: true, fecha_eliminada: new Date().toISOString() })
+    .eq("id", notificacionUsuarioId);
+};
+
+// Eliminar todas las notificaciones para un usuario
+export const deleteAllNotifications = async (userId: string) => {
+  // Llama la función SQL que marca todas como eliminadas para el usuario
+  return supabase.rpc("eliminar_todas_notificaciones_usuario", {
+    p_usuario_id: userId,
+  });
+};
+
+// Crear una nueva notificación global (la lógica de asignación individual la hacen los triggers/funciones en la base de datos)
 export const createNotification = async (notificationData: {
   tipo: string;
   titulo: string;
   mensaje: string;
   icono?: string;
   color?: string;
-  para_roles?: string[];
   entidad_tipo?: string;
   entidad_id?: string;
   usuario_id?: string;
 }) => {
   try {
     const { data, error } = await supabase
-      .from('notificaciones')
+      .from("notificaciones")
       .insert([notificationData])
       .select()
       .single();
-      
     if (error) {
-      console.error('Error creating notification:', error);
-      // Rather than failing, we continue with the order process
-      // This allows orders to succeed even if notification creation fails
+      console.error("Error creating notification:", error);
       return { success: false, error };
     }
-    
     return { success: true, data };
   } catch (error) {
-    console.error('Exception creating notification:', error);
-    // We still continue with the order process
+    console.error("Exception creating notification:", error);
     return { success: false, error };
   }
-};
-
-// Mark notification as seen/deleted for a specific user
-export const markNotificationAsSeen = async (notificationId: string, userId: string) => {
-  // First, get the current visto object
-  const { data, error } = await supabase
-    .from('notificaciones')
-    .select('visto')
-    .eq('id', notificationId)
-    .single();
-
-  if (error) {
-    console.error('Error fetching notification:', error);
-    throw error;
-  }
-
-  // Update the visto object for this user
-  const vistoData: Record<string, string> = data?.visto ? { ...data.visto as Record<string, string> } : {};
-  vistoData[userId] = new Date().toISOString();
-
-  // Update the notification with the new visto data
-  return supabase
-    .from('notificaciones')
-    .update({ visto: vistoData })
-    .eq('id', notificationId);
-};
-
-// Mark all notifications as seen/deleted for a user
-export const markAllNotificationsAsSeen = async (userId: string) => {
-  // Get all notifications first
-  const { data: notifications, error } = await supabase
-    .from('notificaciones')
-    .select('id, visto');
-
-  if (error) {
-    console.error('Error fetching notifications:', error);
-    throw error;
-  }
-
-  // For each notification, update its visto field
-  const updatePromises = notifications.map(notif => {
-    const vistoData: Record<string, string> = notif.visto ? { ...notif.visto as Record<string, string> } : {};
-    vistoData[userId] = new Date().toISOString();
-    
-    return supabase
-      .from('notificaciones')
-      .update({ visto: vistoData })
-      .eq('id', notif.id);
-  });
-
-  return Promise.all(updatePromises);
-};
-
-// Delete a specific notification
-export const deleteNotification = async (notificationId: string) => {
-  return supabase
-    .from('notificaciones')
-    .delete()
-    .eq('id', notificationId);
-};
-
-// Delete all notifications for a user
-export const deleteAllNotifications = async () => {
-  // Using a valid filter that selects all notifications
-  // instead of the problematic neq (not equal) without a value
-  return supabase
-    .from('notificaciones')
-    .delete()
-    .gt('id', '00000000-0000-0000-0000-000000000000');
 };

@@ -46,12 +46,30 @@ export const createPedido = async (pedido: {
     if (pedidoError) throw pedidoError;
     if (!pedidoData) throw new Error("No se pudo crear el pedido");
 
+    // Obtener datos del usuario para la notificación
+    let nombreCompleto = "";
+    try {
+      const { data: usuarioData, error: usuarioError } = await supabase
+        .from("usuarios")
+        .select("nombres, apellidos")
+        .eq("id", pedido.usuario_id)
+        .single();
+      if (!usuarioError && usuarioData) {
+        nombreCompleto =
+          `${usuarioData.nombres} ${usuarioData.apellidos}`.trim();
+      } else {
+        nombreCompleto = pedido.usuario_id;
+      }
+    } catch (e) {
+      nombreCompleto = pedido.usuario_id;
+    }
+
     // Crear notificación SOLO para pedido creado, solo para admin
     try {
       await createNotification({
         tipo: "pedido_creado",
         titulo: "Nuevo pedido creado",
-        mensaje: `Se ha creado un nuevo pedido con ID: ${pedidoData.id}`,
+        mensaje: `Nuevo pedido creado por ${nombreCompleto}`,
         entidad_tipo: "pedido",
         entidad_id: pedidoData.id,
         para_roles: ["admin"],

@@ -129,6 +129,7 @@ export const generateOrderPdfOld = async (pedido: any, usuario: any) => {
     y += 3;
     doc.setFont("helvetica", "normal");
     const productos = Array.isArray(pedido.productos) ? pedido.productos : [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     productos.forEach((prod: any) => {
       doc.text(
         `${prod.nombre} x${prod.cantidad || 1}  S/.${

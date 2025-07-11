@@ -64,6 +64,8 @@ const Ranking = () => {
   const [periodo, setPeriodo] = useState("ultimo-mes");
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Estadísticas para tarjetas de dashboard
   const [estadisticas, setEstadisticas] = useState({
@@ -233,6 +235,77 @@ const Ranking = () => {
     return proveedoresFiltrados;
   };
 
+  // Paginación
+  const proveedoresFiltrados = filtrarProveedores();
+  const totalPages = Math.ceil(proveedoresFiltrados.length / itemsPerPage);
+  const paginatedProveedores = proveedoresFiltrados.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const proveedoresDestacados = proveedoresFiltrados.slice(0, 4);
+
+  const categorias = [
+    "Todas",
+    ...new Set(proveedores.map((p) => p.tipo).filter(Boolean)),
+  ];
+
+  const columns = [
+    {
+      header: "Ranking",
+      accessor: "ranking",
+      cell: (_value: number, row: ProveedorWithTipo) => (
+        <div className="flex items-center">
+          <Trophy className="text-yellow-500 mr-2" />
+          <span>{row.ranking}</span>
+        </div>
+      ),
+    },
+    {
+      header: "Proveedor",
+      accessor: "nombre",
+      cell: (_value: string, row: ProveedorWithTipo) => (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 flex-shrink-0">
+            <ProveedorCard
+              logo={getProveedorIconUrl(row, proveedoresTipos)}
+              nombre=""
+              rating={0}
+              porcentajePedidos={0}
+            />
+          </div>
+          <span className="font-medium">{row.nombre}</span>
+        </div>
+      ),
+    },
+    {
+      header: "Calificación",
+      accessor: "calificacion",
+      cell: (value: number) => (
+        <div className="flex items-center gap-2">
+          <StarRating rating={value} />
+          <span className="font-semibold">{(value || 0).toFixed(1)}</span>
+        </div>
+      ),
+    },
+    {
+      header: "Pedidos",
+      accessor: "pedidosTotales",
+    },
+    {
+      header: "Último Pedido",
+      accessor: "ultimoPedido",
+      cell: (value: string) => (
+        <span>{value ? new Date(value).toLocaleDateString() : "N/A"}</span>
+      ),
+    },
+  ];
+
+  if (loading) {
+    return <div>Cargando...</div>;
+  }
+
+  // Agregar funciones para reportes
   const handleGenerateReport = async (settings: ReportSettings) => {
     try {
       setIsGeneratingReport(true);
@@ -299,69 +372,6 @@ const Ranking = () => {
     }
   };
 
-  const proveedoresFiltrados = filtrarProveedores();
-  const proveedoresDestacados = proveedoresFiltrados.slice(0, 4);
-
-  const categorias = [
-    "Todas",
-    ...new Set(proveedores.map((p) => p.tipo).filter(Boolean)),
-  ];
-
-  const columns = [
-    {
-      header: "Ranking",
-      accessor: "ranking",
-      cell: (_value: number, row: ProveedorWithTipo) => (
-        <div className="flex items-center">
-          <Trophy className="text-yellow-500 mr-2" />
-          <span>{row.ranking}</span>
-        </div>
-      ),
-    },
-    {
-      header: "Proveedor",
-      accessor: "nombre",
-      cell: (_value: string, row: ProveedorWithTipo) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 flex-shrink-0">
-            <ProveedorCard
-              logo={getProveedorIconUrl(row, proveedoresTipos)}
-              nombre=""
-              rating={0}
-              porcentajePedidos={0}
-            />
-          </div>
-          <span className="font-medium">{row.nombre}</span>
-        </div>
-      ),
-    },
-    {
-      header: "Calificación",
-      accessor: "calificacion",
-      cell: (value: number) => (
-        <div className="flex items-center gap-2">
-          <StarRating rating={value} />
-          <span className="font-semibold">{(value || 0).toFixed(1)}</span>
-        </div>
-      ),
-    },
-    {
-      header: "Pedidos",
-      accessor: "pedidosTotales",
-    },
-    {
-      header: "Último Pedido",
-      accessor: "ultimoPedido",
-      cell: (value: string) => (
-        <span>{value ? new Date(value).toLocaleDateString() : "N/A"}</span>
-      ),
-    },
-  ];
-
-  if (loading) {
-    return <div>Cargando...</div>;
-  }
-
   return (
     <div className="container mx-auto p-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
@@ -404,14 +414,6 @@ const Ranking = () => {
             <FileText className="mr-2" />
             {isGeneratingReport ? "Generando..." : "Generar Reporte"}
           </Button>
-          <Button
-            variant="default"
-            onClick={() => handleQuickReport("top10")}
-            disabled={isGeneratingReport}
-          >
-            <Printer className="mr-2" />
-            Top 10
-          </Button>
         </div>
       </div>
 
@@ -421,7 +423,10 @@ const Ranking = () => {
             <Filter className="text-gray-600" />
             <select
               value={filtroTipo}
-              onChange={(e) => setFiltroTipo(e.target.value)}
+              onChange={(e) => {
+                setFiltroTipo(e.target.value);
+                setCurrentPage(1);
+              }}
               className="p-2 border rounded-md"
             >
               <option value="">Todos los tipos</option>
@@ -431,9 +436,25 @@ const Ranking = () => {
                 </option>
               ))}
             </select>
+            {/* Botón para limpiar filtro */}
+            {filtroTipo && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setFiltroTipo("");
+                  setCurrentPage(1);
+                }}
+              >
+                Limpiar filtro
+              </Button>
+            )}
             <select
               value={ordenarPor}
-              onChange={(e) => setOrdenarPor(e.target.value)}
+              onChange={(e) => {
+                setOrdenarPor(e.target.value);
+                setCurrentPage(1);
+              }}
               className="p-2 border rounded-md"
             >
               <option value="calificacion">Ordenar por Calificación</option>
@@ -458,31 +479,42 @@ const Ranking = () => {
         <div className="overflow-x-auto">
           <Table
             columns={columns}
-            data={filtrarProveedores().map((p, index) => ({
+            data={paginatedProveedores.map((p, index) => ({
               ...p,
-              ranking: index + 1,
+              ranking: (currentPage - 1) * itemsPerPage + index + 1,
             }))}
           />
         </div>
 
+        {/* Paginación */}
         <Pagination className="mt-4">
           <PaginationContent>
             <PaginationItem>
-              <PaginationPrevious href="#" />
+              <PaginationPrevious
+                href="#"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                aria-disabled={currentPage === 1}
+              />
             </PaginationItem>
+            {[...Array(totalPages)].map((_, i) => (
+              <PaginationItem key={i}>
+                <PaginationLink
+                  href="#"
+                  isActive={currentPage === i + 1}
+                  onClick={() => setCurrentPage(i + 1)}
+                >
+                  {i + 1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
             <PaginationItem>
-              <PaginationLink href="#">1</PaginationLink>
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationLink href="#" isActive>
-                2
-              </PaginationLink>
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationLink href="#">3</PaginationLink>
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationNext href="#" />
+              <PaginationNext
+                href="#"
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                }
+                aria-disabled={currentPage === totalPages}
+              />
             </PaginationItem>
           </PaginationContent>
         </Pagination>

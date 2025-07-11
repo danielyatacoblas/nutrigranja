@@ -81,6 +81,31 @@ const Header: React.FC<HeaderProps> = () => {
     }
   }, [user]);
 
+  // Suscripción en tiempo real a notificaciones_usuario para el usuario actual
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel("realtime:usuario_notificaciones_" + user.id)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notificaciones_usuario",
+          filter: `usuario_id=eq.${user.id}`,
+        },
+        (payload) => {
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
   const fetchUserInfo = async () => {
     if (!user?.id) return;
 
@@ -111,6 +136,7 @@ const Header: React.FC<HeaderProps> = () => {
       // Ensure data conforms to Notification[] type
       const typedNotifications = data?.map((notification) => ({
         ...notification,
+        id: notification.notificacion_usuario_id, // <-- mapeo correcto
         visto: notification.visto || {},
       })) as Notification[];
 
@@ -234,7 +260,7 @@ const Header: React.FC<HeaderProps> = () => {
 
     try {
       setIsDeletingAll(true);
-      const { error } = await deleteAllNotifications();
+      const { error } = await deleteAllNotifications(user.id); // <-- pasar user.id
 
       if (error) {
         console.error("Error deleting all notifications:", error);

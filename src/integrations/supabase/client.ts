@@ -57,7 +57,6 @@ export {
 export {
   getUserNotifications,
   markNotificationAsSeen,
-  markAllNotificationsAsSeen,
   deleteNotification,
   deleteAllNotifications,
   createNotification,

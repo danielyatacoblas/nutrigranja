@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { supabase } from "./base-client";
 
 // Fetch dashboard summary data
@@ -240,7 +241,20 @@ export const fetchOrdersByMonth = async (
       case "trimestral": {
         // Generate last 4 quarters
         const currentQuarter = Math.floor(today.getMonth() / 3);
-
+        const monthNames = [
+          "Enero",
+          "Febrero",
+          "Marzo",
+          "Abril",
+          "Mayo",
+          "Junio",
+          "Julio",
+          "Agosto",
+          "Septiembre",
+          "Octubre",
+          "Noviembre",
+          "Diciembre",
+        ];
         for (let i = 0; i < 4; i++) {
           const quarterOffset = i - 3; // Start from 3 quarters ago
           const quarterNumber = ((currentQuarter + quarterOffset + 4) % 4) + 1; // Ensure it's 1-4
@@ -250,11 +264,15 @@ export const fetchOrdersByMonth = async (
 
           // Calculate quarter start and end dates
           const startMonth = (quarterNumber - 1) * 3;
+          const endMonth = startMonth + 2;
           const startDate = new Date(quarterYear, startMonth, 1);
           const endDate = new Date(quarterYear, startMonth + 3, 0);
 
+          // Etiqueta: 'Enero-Marzo 2024', etc.
+          const periodName = `${monthNames[startMonth]}-${monthNames[endMonth]} ${quarterYear}`;
+
           periods.push({
-            name: `Q${quarterNumber} ${quarterYear}`,
+            name: periodName,
             startDate,
             endDate,
           });
@@ -425,7 +443,6 @@ export const fetchAlerts = async (limit = 3) => {
       .select(
         `
         *,
-        producto:producto_id (*),
         proveedor:proveedor_id (*)
       `
       )
@@ -499,17 +516,19 @@ export const fetchTopProductTypes = async (limit = 5) => {
     if (productError) throw productError;
 
     // Count orders by product type
-    const typeOrderCounts: Record<string, { count: number; color?: string }> = {};
-    
+    const typeOrderCounts: Record<string, { count: number; color?: string }> =
+      {};
+
     // Map product IDs to their types
     const productTypeMap = new Map();
-    products.forEach(product => {
-      productTypeMap.set(product.id, product.tipo || 'Sin clasificar');
+    products.forEach((product) => {
+      productTypeMap.set(product.id, product.tipo || "Sin clasificar");
     });
-    
+
     // Count orders by product type
-    orders.forEach(order => {
-      const productType = productTypeMap.get(order.producto_id) || 'Sin clasificar';
+    orders.forEach((order) => {
+      const productType =
+        productTypeMap.get(order.producto_id) || "Sin clasificar";
       if (!typeOrderCounts[productType]) {
         typeOrderCounts[productType] = { count: 0 };
       }
@@ -518,23 +537,25 @@ export const fetchTopProductTypes = async (limit = 5) => {
 
     // Assign colors to each type
     const categoryColors = {
-      'Frutas': '#2196F3',
-      'Verduras': '#4CAF50',
-      'Lácteos': '#FFC107',
-      'Carnes': '#F44336',
-      'Sin clasificar': '#9E9E9E'
+      Frutas: "#2196F3",
+      Verduras: "#4CAF50",
+      Lácteos: "#FFC107",
+      Carnes: "#F44336",
+      "Sin clasificar": "#9E9E9E",
     };
-    
+
     // Convert to array and sort by count (descending)
     const sortedTypes = Object.entries(typeOrderCounts)
       .map(([name, { count }]) => ({
         name,
         value: count,
-        color: (categoryColors as any)[name] || `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`
+        color:
+          (categoryColors as any)[name] ||
+          `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`,
       }))
       .sort((a, b) => b.value - a.value)
       .slice(0, limit);
-    
+
     return sortedTypes;
   } catch (error) {
     console.error("Error fetching top product types:", error);

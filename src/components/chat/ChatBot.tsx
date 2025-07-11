@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AssistantConfig from "../assistant/AssistantConfig";
+import { askSimpleChatbot } from "@/integrations/supabase/simple-chatbot";
 
 interface Message {
   id: string;
@@ -73,102 +74,31 @@ const ChatBot: React.FC = () => {
     setIsLoading(true);
 
     try {
-      if (!user) {
-        throw new Error("Usuario no autenticado");
-      }
-
-      const { data, error } = await supabase.functions.invoke(
-        "chat-assistant",
-        {
-          body: { message: currentInput },
-          headers: {
-            Authorization: `Bearer ${
-              (
-                await supabase.auth.getSession()
-              ).data.session?.access_token
-            }`,
-          },
-        }
-      );
-
-      if (error) {
-        console.error("Supabase function error:", error);
-        throw error;
-      }
-
-      if (data?.error) {
-        console.error("Assistant API error:", data.error);
-
-        let errorMessage =
-          "Lo siento, ocurrió un error al procesar tu solicitud.";
-
-        if (
-          data.error === "API key no configurada" ||
-          data.error === "API key inválida"
-        ) {
-          errorMessage =
-            "Necesitas configurar tu API key de OpenAI. Haz clic en el botón de configuración para agregarla.";
-        }
-
-        const botMessage: Message = {
-          id: Date.now().toString(),
-          content: errorMessage,
-          sender: "bot",
-          timestamp: new Date(),
-        };
-
-        setMessages((prev) => [...prev, botMessage]);
-
-        if (
-          data.error === "API key no configurada" ||
-          data.error === "API key inválida"
-        ) {
-          toast.error("API key requerida", {
-            action: {
-              label: "Configurar",
-              onClick: () => setIsConfigOpen(true),
-            },
-          });
-        }
-
-        return;
-      }
-
+      // Llamada directa al chatbot simple (sin auth)
+      const respuesta = await askSimpleChatbot(currentInput);
       const botMessage: Message = {
         id: Date.now().toString(),
-        content: data?.response || "Lo siento, no pude procesar tu solicitud.",
+        content: respuesta || "Lo siento, no pude procesar tu solicitud.",
         sender: "bot",
         timestamp: new Date(),
-        tokens_used: data?.tokens_used,
       };
-
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
       console.error("Error calling assistant:", error);
-
       let errorContent =
         "Lo siento, ocurrió un error al procesar tu solicitud.";
-
       if (error instanceof Error) {
         if (error.message.includes("API key")) {
           errorContent =
-            "Necesitas configurar tu API key de OpenAI. Haz clic en el botón de configuración.";
-        } else if (
-          error.message.includes("unauthorized") ||
-          error.message.includes("auth")
-        ) {
-          errorContent =
-            "Error de autenticación. Por favor, vuelve a iniciar sesión.";
+            "Necesitas configurar tu API key de OpenAI. Contacta al administrador.";
         }
       }
-
       const errorMessage: Message = {
         id: Date.now().toString(),
         content: errorContent,
         sender: "bot",
         timestamp: new Date(),
       };
-
       setMessages((prev) => [...prev, errorMessage]);
       toast.error("Error al comunicarse con el asistente");
     } finally {
