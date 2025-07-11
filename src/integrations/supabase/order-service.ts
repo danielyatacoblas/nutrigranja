@@ -46,9 +46,9 @@ export const createPedido = async (pedido: {
     if (pedidoError) throw pedidoError;
     if (!pedidoData) throw new Error("No se pudo crear el pedido");
 
-    // Crear notificación de manera no bloqueante
+    // Crear notificación SOLO para pedido creado, solo para admin
     try {
-      const result = await createNotification({
+      await createNotification({
         tipo: "pedido_creado",
         titulo: "Nuevo pedido creado",
         mensaje: `Se ha creado un nuevo pedido con ID: ${pedidoData.id}`,
@@ -58,12 +58,9 @@ export const createPedido = async (pedido: {
         icono: "ShoppingCart",
         color: "green",
       });
-      const notificationId = result.data?.id;
-      if (notificationId) {
-        console.log("Notificación creada con ID:", notificationId);
-      }
     } catch (e) {
-      console.error("Error al crear notificación:", e);
+      // Si falla la notificación, solo loguea el error, no interrumpe el flujo
+      console.error("Error al crear notificación importante:", e);
     }
 
     return { data: pedidoData, error: null };
