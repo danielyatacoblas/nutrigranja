@@ -69,22 +69,25 @@ export const fetchDashboardSummary = async () => {
 };
 
 // Fetch recent orders
-export const fetchRecentOrders = async (limit = 5) => {
+export const fetchRecentOrders = async (limit = 5, userId?: string) => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("pedido")
-      .select(
-        `
-        *,
-        producto:producto_id (*),
-        proveedor:proveedor_id (*)
-      `
-      )
+      .select(`*, proveedor:proveedor_id (*)`)
       .order("fecha_pedido", { ascending: false })
       .limit(limit);
-
+    if (userId) {
+      query = query.eq("usuario_id", userId);
+    }
+    const { data, error } = await query;
     if (error) throw error;
-    return data;
+    // Solo pedidos realizados o completados
+    const filtered = (data || []).filter(
+      (pedido) => pedido.estado === "pendiente" || pedido.estado === "recibido"
+    );
+    // Eliminar el id antes de devolver
+    const mapped = filtered.map(({ id, ...rest }) => rest);
+    return mapped;
   } catch (error) {
     console.error("Error fetching recent orders:", error);
     throw error;

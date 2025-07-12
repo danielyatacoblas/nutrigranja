@@ -23,7 +23,7 @@ interface CartDrawerProps {
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ open, onClose }) => {
   const { items, updateQuantity, total, clearCart, removeItem } = useCart();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [isLoading, setIsLoading] = React.useState(false);
   const [proveedorMap, setProveedorMap] = useState<{ [id: string]: string }>(
     {}
@@ -77,19 +77,22 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ open, onClose }) => {
       // Crea un pedido por cada proveedor
       const orderPromises = Object.entries(productosPorProveedor).map(
         async ([proveedor_id, productos]) => {
-          return await createPedido({
-            productos: productos.map((item) => ({
-              id: String(item.id),
-              nombre: item.nombre,
-              cantidad: item.cantidad,
-              precio: item.precio,
-              unidad: item.unidad,
-              // agrega más campos si es necesario
-            })),
-            proveedor_id,
-            usuario_id: user.id,
-            // puedes agregar fecha_estimada_entrega si aplica
-          });
+          return await createPedido(
+            {
+              productos: productos.map((item) => ({
+                id: String(item.id),
+                nombre: item.nombre,
+                cantidad: item.cantidad,
+                precio: item.precio,
+                unidad: item.unidad,
+                // agrega más campos si es necesario
+              })),
+              proveedor_id,
+              usuario_id: user.id,
+              // puedes agregar fecha_estimada_entrega si aplica
+            },
+            userProfile
+          );
         }
       );
 

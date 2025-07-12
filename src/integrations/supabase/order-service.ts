@@ -1,13 +1,18 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Producto } from "@/types/database";
 import { supabase } from "./base-client";
 import { createNotification } from "./notification-service";
+import { registrarHistorial } from "@/utils/historialUtils";
 
-export const createPedido = async (pedido: {
-  productos: Producto[]; // array de productos con todos los datos necesarios
-  proveedor_id: string;
-  fecha_estimada_entrega?: string;
-  usuario_id?: string;
-}) => {
+export const createPedido = async (
+  pedido: {
+    productos: Producto[]; // array de productos con todos los datos necesarios
+    proveedor_id: string;
+    fecha_estimada_entrega?: string;
+    usuario_id?: string;
+  },
+  userProfile?: any
+) => {
   try {
     // Obtener el usuario_id del usuario autenticado si no se proporciona
     if (!pedido.usuario_id) {
@@ -46,6 +51,21 @@ export const createPedido = async (pedido: {
     if (pedidoError) throw pedidoError;
     if (!pedidoData) throw new Error("No se pudo crear el pedido");
 
+    // Registrar historial de creación de pedido
+    if (userProfile) {
+      await registrarHistorial({
+        tipo: "Pedido",
+        descripcion: `Pedido creado: ${pedidoData.id}`,
+        usuario: userProfile.usuario,
+        usuario_id: userProfile.id,
+        nombres: userProfile.nombres,
+        apellidos: userProfile.apellidos,
+        modulo: "pedidos",
+        accion: "crear",
+        datos: pedidoData,
+      });
+    }
+
     // Obtener datos del usuario para la notificación
     let nombreCompleto = "";
     try {
@@ -72,7 +92,6 @@ export const createPedido = async (pedido: {
         mensaje: `Nuevo pedido creado por ${nombreCompleto}`,
         entidad_tipo: "pedido",
         entidad_id: pedidoData.id,
-        para_roles: ["admin"],
         icono: "ShoppingCart",
         color: "green",
       });

@@ -11,6 +11,7 @@ import {
   generateOrderPdfOld,
   deletePedido,
 } from "@/integrations/supabase/order-service-old";
+import { registrarHistorial } from "@/utils/historialUtils";
 import { useAuth } from "@/context/AuthContext";
 import { Pedido } from "@/types/database";
 import FiltroPedidosModal, {
@@ -87,7 +88,7 @@ const Pedidos = () => {
       sortField: "fecha_pedido",
       sortDirection: "desc",
     });
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
 
   // Fetch orders from Supabase
   const fetchPedidos = async () => {
@@ -337,6 +338,20 @@ const Pedidos = () => {
       if (!pdfUrl) throw new Error("No se pudo generar el PDF del pedido");
       // Actualizar estado del pedido y guardar URL del PDF
       await updatePedidoEstado(currentPedido.id, "recibido", pdfUrl);
+      // Registrar historial de cambio de estado a completado
+      if (userProfile) {
+        await registrarHistorial({
+          tipo: "Pedido",
+          descripcion: `Pedido marcado como completado: ${currentPedido.id}`,
+          usuario: userProfile.usuario,
+          usuario_id: userProfile.id,
+          nombres: userProfile.nombres,
+          apellidos: userProfile.apellidos,
+          modulo: "Pedidos",
+          accion: "completar",
+          datos: { pedidoId: currentPedido.id, nuevoEstado: "recibido" },
+        });
+      }
       // Calificar cada producto del pedido
       if (!Array.isArray(pedido.productos) || pedido.productos.length === 0) {
         toast.error(

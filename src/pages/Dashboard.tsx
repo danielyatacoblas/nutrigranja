@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
 import Card from "../components/common/Card";
 import {
@@ -72,6 +73,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 type TimePeriod = "semanal" | "mensual" | "trimestral" | "anual";
 
@@ -139,6 +141,8 @@ const Dashboard = () => {
     topProviders: true,
     categories: true,
   });
+
+  const { user, userProfile } = useAuth();
 
   // Load dashboard summary data
   useEffect(() => {
@@ -227,17 +231,20 @@ const Dashboard = () => {
     const loadRecentActivity = async () => {
       try {
         setIsLoading((prev) => ({ ...prev, activity: true }));
-        const data = await fetchRecentOrders();
-        setRecentActivity(data);
+        if (userProfile?.id) {
+          const data = await fetchRecentOrders(5, userProfile.id);
+          setRecentActivity(data);
+        } else {
+          setRecentActivity([]);
+        }
       } catch (error) {
         console.error("Error loading recent activity:", error);
       } finally {
         setIsLoading((prev) => ({ ...prev, activity: false }));
       }
     };
-
     loadRecentActivity();
-  }, []);
+  }, [userProfile?.id]);
 
   // Load system alerts - Modified to load both preview alerts and all alerts
   useEffect(() => {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { createUserWithConfirmedEmail } from "@/integrations/supabase/user-service";
@@ -7,6 +8,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Usuario, UserStatus, UserRole } from "@/types/database";
 import { useAuth } from "@/context/AuthContext";
+import { registrarHistorial } from "@/utils/historialUtils";
 
 const useUserManagement = () => {
   const { user, userProfile } = useAuth();
@@ -279,6 +281,20 @@ const useUserManagement = () => {
 
           if (error) throw error;
           toast.success("Usuario actualizado correctamente");
+          // Registrar historial de edición
+          if (userProfile) {
+            await registrarHistorial({
+              tipo: "Usuario",
+              descripcion: `Usuario editado: ${formData.usuario}`,
+              usuario: userProfile.usuario,
+              usuario_id: userProfile.id,
+              nombres: userProfile.nombres,
+              apellidos: userProfile.apellidos,
+              modulo: "usuarios",
+              accion: "editar",
+              datos: formData,
+            });
+          }
         } else {
           const { data, error } = await createUserWithConfirmedEmail(
             formData.correo.trim(),
@@ -303,10 +319,25 @@ const useUserManagement = () => {
             return;
           }
           toast.success("Usuario creado exitosamente");
+          // Registrar historial de creación
+          if (userProfile) {
+            await registrarHistorial({
+              tipo: "Usuario",
+              descripcion: `Usuario creado: ${formData.usuario}`,
+              usuario: userProfile.usuario,
+              usuario_id: userProfile.id,
+              nombres: userProfile.nombres,
+              apellidos: userProfile.apellidos,
+              modulo: "usuarios",
+              accion: "crear",
+              datos: formData,
+            });
+          }
         }
 
         fetchUsuarios();
         handleCloseModal();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         const errorMessage = error.message || "Error desconocido";
         toast.error(`Error: ${errorMessage}`);
@@ -315,7 +346,7 @@ const useUserManagement = () => {
         setLoading(false);
       }
     },
-    [currentUsuario, formData, fetchUsuarios, handleCloseModal]
+    [currentUsuario, formData, fetchUsuarios, handleCloseModal, userProfile]
   );
 
   const handleUpdateStatus = useCallback(
@@ -353,6 +384,20 @@ const useUserManagement = () => {
         if (data && data.error) throw new Error(data.error);
 
         toast.success("Usuario eliminado correctamente");
+        // Registrar historial de eliminación
+        if (userProfile) {
+          await registrarHistorial({
+            tipo: "Usuario",
+            descripcion: `Usuario eliminado: ${currentUsuario.usuario}`,
+            usuario: userProfile.usuario,
+            usuario_id: userProfile.id,
+            nombres: userProfile.nombres,
+            apellidos: userProfile.apellidos,
+            modulo: "usuarios",
+            accion: "eliminar",
+            datos: { ...currentUsuario },
+          });
+        }
         fetchUsuarios();
         handleCloseDeleteModal();
       } catch (error: any) {
@@ -361,7 +406,7 @@ const useUserManagement = () => {
         setLoading(false);
       }
     }
-  }, [currentUsuario, fetchUsuarios, handleCloseDeleteModal]);
+  }, [currentUsuario, fetchUsuarios, handleCloseDeleteModal, userProfile]);
 
   const handleSearch = useCallback((term: string) => {
     setSearchTerm(term);

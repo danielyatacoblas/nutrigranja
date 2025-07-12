@@ -49,6 +49,8 @@ import {
   exportToPDF,
   formatProductosForExport,
 } from "@/utils/exportUtils";
+import { registrarHistorial } from "@/utils/historialUtils";
+import { useAuth } from "@/context/AuthContext";
 
 const Productos = () => {
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -126,6 +128,8 @@ const Productos = () => {
       })),
     [unitsOfMeasure]
   );
+
+  const { user, userProfile } = useAuth();
 
   useEffect(() => {
     fetchProductos();
@@ -326,6 +330,20 @@ const Productos = () => {
 
         if (error) throw error;
         toast.success("Producto actualizado correctamente");
+        // Registrar historial de edición
+        if (userProfile) {
+          await registrarHistorial({
+            tipo: "Producto",
+            descripcion: `Producto editado: ${formData.nombre}`,
+            usuario: userProfile.usuario,
+            usuario_id: userProfile.id,
+            nombres: userProfile.nombres,
+            apellidos: userProfile.apellidos,
+            modulo: "productos",
+            accion: "editar",
+            datos: formData,
+          });
+        }
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error } = await anyFrom<any>(supabase, "producto").insert([
@@ -334,6 +352,20 @@ const Productos = () => {
 
         if (error) throw error;
         toast.success("Producto agregado correctamente");
+        // Registrar historial de creación
+        if (userProfile) {
+          await registrarHistorial({
+            tipo: "Producto",
+            descripcion: `Producto creado: ${formData.nombre}`,
+            usuario: userProfile.usuario,
+            usuario_id: userProfile.id,
+            nombres: userProfile.nombres,
+            apellidos: userProfile.apellidos,
+            modulo: "productos",
+            accion: "crear",
+            datos: formData,
+          });
+        }
       }
 
       handleCloseModal();

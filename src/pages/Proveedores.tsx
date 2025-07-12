@@ -35,6 +35,8 @@ import {
   validarFormatoDocumento,
 } from "@/integrations/supabase/provider-service";
 import { codigoPaisTelefono } from "@/data/codigo-paises";
+import { registrarHistorial } from "@/utils/historialUtils";
+import { useAuth } from "@/context/AuthContext";
 
 const Proveedores = () => {
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -80,6 +82,8 @@ const Proveedores = () => {
   const [correoFiltro, setCorreoFiltro] = useState("");
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  const { user, userProfile } = useAuth();
 
   useEffect(() => {
     fetchProveedores();
@@ -312,6 +316,20 @@ const Proveedores = () => {
 
         if (error) throw error;
         toast.success("Proveedor actualizado correctamente");
+        // Registrar historial de edición
+        if (userProfile) {
+          await registrarHistorial({
+            tipo: "Proveedor",
+            descripcion: `Proveedor editado: ${formData.nombre}`,
+            usuario: userProfile.usuario,
+            usuario_id: userProfile.id,
+            nombres: userProfile.nombres,
+            apellidos: userProfile.apellidos,
+            modulo: "proveedores",
+            accion: "editar",
+            datos: formData,
+          });
+        }
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error } = await anyFrom<any>(supabase, "proveedor").insert([
@@ -331,6 +349,20 @@ const Proveedores = () => {
 
         if (error) throw error;
         toast.success("Proveedor agregado correctamente");
+        // Registrar historial de creación
+        if (userProfile) {
+          await registrarHistorial({
+            tipo: "Proveedor",
+            descripcion: `Proveedor creado: ${formData.nombre}`,
+            usuario: userProfile.usuario,
+            usuario_id: userProfile.id,
+            nombres: userProfile.nombres,
+            apellidos: userProfile.apellidos,
+            modulo: "proveedores",
+            accion: "crear",
+            datos: formData,
+          });
+        }
       }
 
       handleCloseModal();
@@ -351,6 +383,20 @@ const Proveedores = () => {
 
         if (error) throw error;
         toast.success("Proveedor eliminado correctamente");
+        // Registrar historial de eliminación
+        if (userProfile) {
+          await registrarHistorial({
+            tipo: "Proveedor",
+            descripcion: `Proveedor eliminado: ${currentProveedor.nombre}`,
+            usuario: userProfile.usuario,
+            usuario_id: userProfile.id,
+            nombres: userProfile.nombres,
+            apellidos: userProfile.apellidos,
+            modulo: "proveedores",
+            accion: "eliminar",
+            datos: currentProveedor,
+          });
+        }
         handleCloseDeleteModal();
         fetchProveedores();
       } catch (e) {
